@@ -1,0 +1,37 @@
+image: python:bookworm
+
+variables:
+  TZ: Asia/Shanghai
+  RUSTUP_HOME: $CI_PROJECT_DIR/.rustup
+  CARGO_HOME: $CI_PROJECT_DIR/.cargo
+  UV_CACHE_DIR: $CI_PROJECT_DIR/.uv
+  UV_INSTALL_DIR: $CI_PROJECT_DIR/.cargo/bin
+
+stages:
+  - cleanliness
+  - test
+
+cache:
+  key: "pyparrot-ci-cache"
+  paths:
+    - $CI_PROJECT_DIR/.rustup
+    - $CI_PROJECT_DIR/.cargo
+    - $CI_PROJECT_DIR/.uv
+
+before_script:
+  - "[ ! -f $CARGO_HOME/env ] && curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s - -y"
+  - source $CARGO_HOME/env
+  - just --version >/dev/null 2>&1 || cargo install just
+  - uv -V >/dev/null 2>&1 || curl -LsSf https://astral.sh/uv/install.sh | sh
+  - just setup
+  - source .venv/bin/activate
+
+cleanliness:
+  stage: cleanliness
+  script:
+    - just c
+
+test:
+  stage: test
+  script:
+    - just t
