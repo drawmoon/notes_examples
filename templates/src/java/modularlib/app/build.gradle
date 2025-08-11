@@ -1,0 +1,8 @@
+base {
+	archivesName = 'modularlib-example-app'
+}
+
+dependencies {
+	implementation project(':core')
+	implementation project(':utils')
+}

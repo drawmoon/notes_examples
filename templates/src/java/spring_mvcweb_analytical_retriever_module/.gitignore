@@ -1,0 +1,19 @@
+# bazel
+bazel-bin
+bazel-genfiles
+bazel-java-maven
+bazel-out
+bazel-testlogs
+
+# ide
+.vscode
+.idea
+
+# maven
+target
+
+# local properties
+bootstrap-local.properties
+
+# logs
+log*

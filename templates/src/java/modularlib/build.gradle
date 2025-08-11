@@ -1,0 +1,172 @@
+plugins {
+	id "com.github.johnrengelman.shadow" version "8.1.1"
+	id 'com.diffplug.spotless' version '6.13.0'
+}
+
+allprojects {
+	group = 'com.example.modularlib'
+	version = '0.0.1'
+	if (!project.hasProperty('release')) {
+		version += '-SNAPSHOT'
+	}
+}
+
+subprojects {
+	apply plugin: 'java-library'
+	apply plugin: 'maven-publish'
+	apply plugin: 'signing'
+	apply plugin: 'com.github.johnrengelman.shadow'
+	apply plugin: 'com.diffplug.spotless'
+
+	java {
+		toolchain {
+			languageVersion = JavaLanguageVersion.of(8)
+		}
+		withJavadocJar()
+		withSourcesJar()
+	}
+
+	shadowJar {
+		archiveClassifier = 'all'
+	}
+
+	repositories {
+		mavenLocal()
+		mavenCentral()
+	}
+
+	dependencies {
+		testImplementation platform('org.junit:junit-bom:5.10.0')
+		testImplementation 'org.junit.jupiter:junit-jupiter'
+		testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+	}
+
+	test {
+		useJUnitPlatform()
+		testLogging {
+			events "passed", "skipped", "failed"
+		}
+	}
+
+	tasks.withType(JavaCompile).configureEach {
+		options.encoding = 'UTF-8'
+	}
+
+	tasks.withType(Javadoc).configureEach {
+		options.encoding = 'UTF-8'
+		if (JavaVersion.current() == JavaVersion.VERSION_1_8) {
+			options.links 'https://docs.oracle.com/javase/8/docs/api/'
+		} else {
+			options.links 'https://docs.oracle.com/en/java/javase/11/docs/api/'
+		}
+	}
+
+	spotless {
+		format 'misc', {
+			target '*.gradle', '.gitattributes', '.gitignore'
+			trimTrailingWhitespace()
+			indentWithTabs()
+			endWithNewline()
+		}
+		java {
+			target '**/*.java'
+			importOrder 'edu', 'com', 'io', 'java', 'javax', 'org', ''
+			removeUnusedImports()
+			trimTrailingWhitespace()
+			palantirJavaFormat()
+		}
+	}
+
+	jar {
+		manifest {
+			def javaVersion = JavaVersion.toVersion(java.toolchain.languageVersion.get().asInt())
+			def archivesName = project.base.archivesName.getOrNull()
+			if (archivesName == null) {
+				archivesName = project.name
+			}
+
+			attributes(
+				'Implementation-Title': archivesName,
+				'Implementation-Version': javaVersion,
+				'Built-By': 'drash',
+				'Built-JDK': System.getProperty('java.version'),
+				'Source-Compatibility': javaVersion,
+				'Target-Compatibility': javaVersion)
+		}
+	}
+
+	afterEvaluate {
+		def archivesName = project.base.archivesName.getOrNull()
+		if (archivesName == null) {
+			archivesName = project.name
+		}
+
+		publishing {
+			publications {
+				mavenJava(MavenPublication) {
+					from components.java
+					artifactId = archivesName
+					groupId = group
+					version = version
+					pom {
+						name = archivesName
+						packaging = 'jar'
+						description = 'A java library tempate project'
+						url = 'https://github.com/drawmoon/notes_examples'
+						inceptionYear = '2023'
+
+						licenses {
+							license {
+								name = 'MIT License'
+								url = 'https://opensource.org/licenses/MIT'
+							}
+						}
+
+						scm {
+							connection = 'scm:git:git@github.com:drawmoon/notes_examples.git'
+							developerConnection = 'scm:git:git@github.com:drawmoon/notes_examples.git'
+							url = 'https://github.com/drawmoon/notes_examples'
+						}
+
+						developers {
+							developer {
+								id = 'drash'
+								name = 'drawmoon'
+								email = 'drawmoonsh@outlook.com'
+							}
+						}
+					}
+				}
+			}
+			repositories {
+				def releaseRepoUrl = "https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/"
+				if (version.endsWith("-SNAPSHOT")) {
+					releaseRepoUrl = "https://s01.oss.sonatype.org/content/repositories/snapshots/"
+				}
+				maven {
+					name = "ossrh"
+					url = releaseRepoUrl
+					credentials {
+						username = project.properties['nexusUsername']
+						password = project.properties['nexusPassword']
+					}
+				}
+			}
+		}
+	}
+
+	signing {
+		if (project.properties.containsKey('signing.keyId')) {
+			sign publishing.publications.mavenJava
+		}
+	}
+}
+
+spotless {
+	format 'misc', {
+		target '*.gradle', '.gitattributes', '.gitignore'
+		trimTrailingWhitespace()
+		indentWithTabs()
+		endWithNewline()
+	}
+}

@@ -1,0 +1,45 @@
+[private]
+default:
+  @just --list
+
+# install dependencies
+install:
+  @uv sync --locked --all-groups
+
+# strict type checking
+type_check:
+  #!/usr/bin/env bash
+  FILES=$(git diff --name-only --diff-filter=d HEAD~1 -- '*.py' | tr '\n' ' ')
+  if [ -z "$FILES" ]; then
+    echo "No files need to be type checked"
+    exit 0
+  fi
+  uv run pyright-python $FILES
+
+# check the code cleanliness
+check: && type_check
+  @ruff check
+  @ruff format --check
+
+# format the code
+format:
+  ruff format
+
+# run tests
+test:
+  @pytest
+  @echo "Tests passed"
+
+# generate pip lockfile
+lock:
+  @uv lock
+
+# package as wheel
+package:
+  rm -rf dist
+  python setup.py check
+  python -m build
+
+# publish package to pypi
+publish: package
+  python -m twine upload --repository pypi dist/*
